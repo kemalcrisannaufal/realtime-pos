@@ -1,4 +1,3 @@
-import { email } from "./../../node_modules/zod/src/v4/core/regexes";
 export type AuthFormState = {
   status?: string;
   errors?: {
@@ -9,4 +8,11 @@ export type AuthFormState = {
     avatar_url?: string[];
     _form?: string[];
   };
+};
+
+export type Profile = {
+  id?: string;
+  name?: string;
+  avatar_url?: string;
+  role?: string;
 };
