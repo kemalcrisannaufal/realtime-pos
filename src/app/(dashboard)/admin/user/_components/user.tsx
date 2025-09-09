@@ -10,9 +10,12 @@ import useDataTable from "@/hooks/use-data-table";
 import { createClient } from "@/lib/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Pencil, Trash2 } from "lucide-react";
-import { use, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import DialogCreateUser from "./dialog-create-user";
+import { Profile } from "@/types/auth";
+import DialogUpdateUser from "./dialog-update-user";
+import DialogDeleteUser from "./dialog-delete-user";
 
 export default function UserManagement() {
   const supabase = createClient();
@@ -24,6 +27,15 @@ export default function UserManagement() {
     currentSearch,
     handleChangeSearch,
   } = useDataTable();
+
+  const [selectedAction, setSelectedAction] = useState<{
+    data: Profile;
+    type: "update" | "delete";
+  } | null>(null);
+
+  function handleChangeAction(open: boolean) {
+    if (!open) setSelectedAction(null);
+  }
 
   const {
     data: users,
@@ -52,7 +64,7 @@ export default function UserManagement() {
   const filteredData = useMemo(() => {
     return (users?.data || []).map((user, index) => {
       return [
-        index + 1,
+        currentLimit * (currentPage - 1) + index + 1,
         user.id,
         user.name,
         user.role,
@@ -65,7 +77,9 @@ export default function UserManagement() {
                   Edit
                 </span>
               ),
-              action: () => {},
+              action: () => {
+                setSelectedAction({ type: "update", data: user });
+              },
             },
             {
               label: (
@@ -75,7 +89,9 @@ export default function UserManagement() {
                 </span>
               ),
               variant: "destructive",
-              action: () => {},
+              action: () => {
+                setSelectedAction({ type: "delete", data: user });
+              },
             },
           ]}
         />,
@@ -117,6 +133,20 @@ export default function UserManagement() {
         currentLimit={currentLimit}
         onChangePage={handleChangePage}
         onChangeLimit={handleChangeLimit}
+      />
+
+      <DialogUpdateUser
+        open={selectedAction !== null && selectedAction?.type === "update"}
+        refetch={refetch}
+        currentData={selectedAction?.data}
+        handleChangeAction={handleChangeAction}
+      />
+
+      <DialogDeleteUser
+        open={selectedAction !== null && selectedAction?.type === "delete"}
+        refetch={refetch}
+        currentData={selectedAction?.data}
+        handleChangeAction={handleChangeAction}
       />
     </div>
   );
