@@ -116,7 +116,7 @@ export default function AppSidebar() {
                       <AvatarImage
                         src={profile.avatar_url}
                         alt={profile.name}
-                      ></AvatarImage>
+                      />
                       <AvatarFallback className="rounded-lg">
                         {profile.name?.charAt(0)}
                       </AvatarFallback>

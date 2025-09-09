@@ -18,3 +18,38 @@ export const INITIAL_STATE_PROFILE = {
   role: "",
   avatar_url: "",
 };
+
+export const INITIAL_STATE_CREATE_USER_FORM = {
+  status: "idle",
+  errors: {
+    email: [],
+    password: [],
+    name: [],
+    role: [],
+    avatar_url: [],
+    _form: [],
+  },
+};
+
+export const INITIAL_STATE_CREATE_USER = {
+  email: "",
+  password: "",
+  name: "",
+  role: "",
+  avatar_url: "",
+};
+
+export const ROLE_LIST = [
+  {
+    value: "admin",
+    label: "Admin",
+  },
+  {
+    value: "kitchen",
+    label: "Kitchen",
+  },
+  {
+    value: "cashier",
+    label: "Cashier",
+  },
+];
