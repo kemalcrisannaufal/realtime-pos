@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { LIMIT_LIST } from "@/constants/data-table-constants";
+import { Loader2 } from "lucide-react";
 
 export default function DataTable({
   header,
@@ -78,8 +79,8 @@ export default function DataTable({
 
             {isLoading && (
               <TableRow>
-                <TableCell colSpan={header.length} className="h-24 text-center">
-                  Loading
+                <TableCell colSpan={header.length} className="bg-black/5 h-32">
+                  <Loader2 className="m-auto size-9 text-gray-500 animate-spin" />
                 </TableCell>
               </TableRow>
             )}

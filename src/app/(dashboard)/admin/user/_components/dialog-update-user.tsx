@@ -52,10 +52,7 @@ export default function DialogUpdateUser({
       formData.append("old_avatar_url", currentData?.avatar_url ?? "");
     } else {
       Object.entries(data).forEach(([key, value]) => {
-        formData.append(
-          key,
-          key === "avatar_url" ? preview!.file ?? "" : value
-        );
+        formData.append(key, value);
       });
     }
 
