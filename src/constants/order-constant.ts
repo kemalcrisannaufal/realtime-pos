@@ -7,6 +7,13 @@ export const HEADER_TABLE_ORDER = [
   "Action",
 ];
 
+export const HEADER_TABLE_DETAIL_ORDER = [
+  "No",
+  "Menu",
+  "Total",
+  "Status",
+  "Action",
+];
 export const INITIAL_ORDER = {
   customer_name: "",
   table_id: "",

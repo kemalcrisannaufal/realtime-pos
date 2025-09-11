@@ -10,10 +10,14 @@ import useDataTable from "@/hooks/use-data-table";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { startTransition, useActionState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import DialogCreateOrder from "./dialog-create-order";
 import { Table } from "@/validations/table-validation";
+import { Ban, Link2Icon, ScrollText } from "lucide-react";
+import Link from "next/link";
+import { updateReservation } from "../actions";
+import { INITIAL_STATE_ACTION } from "@/constants/general-constant";
 
 export default function OrderManagement() {
   const supabase = createClient();
@@ -59,6 +63,67 @@ export default function OrderManagement() {
     },
   });
 
+  const { data: tables, refetch: refetchTables } = useQuery({
+    queryKey: ["tables"],
+    queryFn: async () => {
+      const result = await supabase
+        .from("tables")
+        .select("*")
+        .eq("status", "available")
+        .order("created_at");
+
+      return result.data as Table[];
+    },
+  });
+
+  const [reservedState, reservedAction] = useActionState(
+    updateReservation,
+    INITIAL_STATE_ACTION
+  );
+
+  const handleReservation = ({
+    id,
+    tableId,
+    status,
+  }: {
+    id: string;
+    tableId: string;
+    status: string;
+  }) => {
+    const formData = new FormData();
+    Object.entries({ id, tableId, status }).map(([key, value]) => {
+      formData.append(key, value);
+    });
+
+    startTransition(() => {
+      reservedAction(formData);
+    });
+  };
+
+  const reservedActionList = [
+    {
+      label: (
+        <span className="flex items-center gap-2">
+          <Link2Icon />
+          Process
+        </span>
+      ),
+      action: (id: string, tableId: string, status?: string) =>
+        handleReservation({ id, tableId, status: "process" }),
+    },
+    {
+      label: (
+        <span className="flex items-center gap-2">
+          <Ban className="text-red-500" />
+          Cancel
+        </span>
+      ),
+      action: (id: string, tableId: string, status?: string) => {
+        handleReservation({ id, tableId, status: "canceled" });
+      },
+    },
+  ];
+
   const filteredData = useMemo(() => {
     return (orders?.data ?? []).map((order, index) => {
       return [
@@ -76,7 +141,33 @@ export default function OrderManagement() {
         >
           {order.status}
         </div>,
-        <DropdownAction menu={[]} />,
+        <DropdownAction
+          menu={
+            order.status === "reserved"
+              ? reservedActionList.map((item) => ({
+                  label: item.label,
+                  action: () =>
+                    item.action(
+                      order.id,
+                      (order.tables as unknown as { id: string }).id
+                    ),
+                }))
+              : [
+                  {
+                    label: (
+                      <Link
+                        href={`/order/${order.order_id}`}
+                        className="flex items-center gap-2"
+                      >
+                        <ScrollText />
+                        Detail
+                      </Link>
+                    ),
+                    type: "link",
+                  },
+                ]
+          }
+        />,
       ];
     });
   }, [orders]);
@@ -87,23 +178,23 @@ export default function OrderManagement() {
       : 0;
   }, [orders]);
 
-  const { data: tables, refetch: refetchTables } = useQuery({
-    queryKey: ["tables"],
-    queryFn: async () => {
-      const result = await supabase
-        .from("tables")
-        .select("*")
-        .eq("status", "available")
-        .order("created_at");
-
-      return result.data as Table[];
-    },
-  });
-
   const refetch = () => {
     refetchOrders();
     refetchTables();
   };
+
+  useEffect(() => {
+    if (reservedState.errors) {
+      toast.error("Update Status Failed.", {
+        description: reservedState.errors._form?.[0],
+      });
+    }
+
+    if (reservedState.status === "success") {
+      toast.success("Update Status Success.");
+      refetch();
+    }
+  }, [reservedState]);
 
   return (
     <div className="w-full">
