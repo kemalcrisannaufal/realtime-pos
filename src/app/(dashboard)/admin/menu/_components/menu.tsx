@@ -42,7 +42,7 @@ export default function MenuManagement() {
         .from("menus")
         .select("*", { count: "exact" })
         .range((currentPage - 1) * currentLimit, currentPage * currentLimit - 1)
-        .order("created_at")
+        .order("created_at", { ascending: false })
         .ilike("name", `%${currentSearch}%`);
 
       if (result.error) {

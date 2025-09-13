@@ -12,6 +12,7 @@ import Image from "next/image";
 import { useMemo } from "react";
 import { toast } from "sonner";
 import Summary from "./summary";
+import Link from "next/link";
 
 export default function DetailOrder({ id }: { id: string }) {
   const supabase = createClient();
@@ -106,7 +107,9 @@ export default function DetailOrder({ id }: { id: string }) {
       <div className="flex justify-between items-center gap-4">
         <h1 className="font-bold text-2xl">Detail Order</h1>
 
-        <Button>Add Order Item</Button>
+        <Link href={`/order/${id}/add`}>
+          <Button>Add Order Item</Button>
+        </Link>
       </div>
 
       <div className="flex lg:flex-row flex-col gap-4 w-full">
