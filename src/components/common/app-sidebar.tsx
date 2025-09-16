@@ -65,7 +65,7 @@ export default function AppSidebar() {
                         href={item.url}
                         className={cn("px-4 py-3 h-auto", {
                           "bg-teal-500 text-white hover:bg-teal-500 hover:text-white":
-                            pathname === item.url,
+                            pathname.startsWith(item.url),
                         })}
                       >
                         {item.icon && <item.icon />} <span>{item.title}</span>

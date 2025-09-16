@@ -3,16 +3,28 @@
 import DataTable from "@/components/common/data-table";
 import DropdownAction from "@/components/common/dropdown-actions";
 import { Button } from "@/components/ui/button";
-import { HEADER_TABLE_DETAIL_ORDER } from "@/constants/order-constant";
+import {
+  HEADER_TABLE_DETAIL_ORDER,
+  ORDERS_MENUS_STATUS,
+} from "@/constants/order-constant";
 import useDataTable from "@/hooks/use-data-table";
 import { createClient } from "@/lib/supabase/client";
 import { cn, convertIDR } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
-import { useMemo } from "react";
-import { toast } from "sonner";
+import { startTransition, useActionState, useEffect, useMemo } from "react";
+import { toast, Toaster } from "sonner";
 import Summary from "./summary";
 import Link from "next/link";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { EllipsisVertical } from "lucide-react";
+import { updateStatusOrderItem } from "../../actions";
+import { INITIAL_STATE_ACTION } from "@/constants/general-constant";
 
 export default function DetailOrder({ id }: { id: string }) {
   const supabase = createClient();
@@ -24,7 +36,7 @@ export default function DetailOrder({ id }: { id: string }) {
     queryFn: async () => {
       const result = await supabase
         .from("orders")
-        .select("id, customer_name, status, payment_url, tables (name, id)")
+        .select("id, customer_name, status, payment_token, tables (name, id)")
         .eq("order_id", id)
         .single();
       if (result.error) {
@@ -38,7 +50,11 @@ export default function DetailOrder({ id }: { id: string }) {
     enabled: !!id,
   });
 
-  const { data: orderMenu, isLoading } = useQuery({
+  const {
+    data: orderMenu,
+    isLoading,
+    refetch: refetchOrderMenu,
+  } = useQuery({
     queryKey: ["orderMenu", currentLimit, currentPage],
     queryFn: async () => {
       const result = await supabase
@@ -60,6 +76,27 @@ export default function DetailOrder({ id }: { id: string }) {
     },
     enabled: !!order?.id,
   });
+
+  const [updateStatusOrderState, updateStatusOrderAction] = useActionState(
+    updateStatusOrderItem,
+    INITIAL_STATE_ACTION
+  );
+
+  const handleUpdateStatusOrder = async ({
+    id,
+    status,
+  }: {
+    id: string;
+    status: string;
+  }) => {
+    const formData = new FormData();
+    formData.append("status", status);
+    formData.append("id", id);
+
+    startTransition(() => {
+      updateStatusOrderAction(formData);
+    });
+  };
 
   const filteredData = useMemo(() => {
     return (orderMenu?.data ?? []).map((orderMenu, index) => {
@@ -86,12 +123,40 @@ export default function DetailOrder({ id }: { id: string }) {
             "bg-gray-500": orderMenu.status === "pending",
             "bg-yellow-500": orderMenu.status === "process",
             "bg-blue-500": orderMenu.status === "ready",
-            "bg-green-500": orderMenu.status === "serve",
+            "bg-green-500": orderMenu.status === "served",
           })}
         >
           {orderMenu.status}
         </div>,
-        <DropdownAction menu={[]} />,
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost">
+              <EllipsisVertical />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {ORDERS_MENUS_STATUS.map((status, index) => {
+              if (status === orderMenu.status) {
+                const nextStatus = ORDERS_MENUS_STATUS[index + 1];
+
+                return (
+                  <DropdownMenuItem
+                    key={`status-${status}`}
+                    className="capitalize"
+                    onClick={() =>
+                      handleUpdateStatusOrder({
+                        id: orderMenu.id,
+                        status: nextStatus,
+                      })
+                    }
+                  >
+                    {nextStatus}
+                  </DropdownMenuItem>
+                );
+              }
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>,
       ];
     });
   }, [orderMenu]);
@@ -101,6 +166,19 @@ export default function DetailOrder({ id }: { id: string }) {
       ? Math.ceil(orderMenu.count / currentLimit)
       : 0;
   }, [orderMenu]);
+
+  useEffect(() => {
+    if (updateStatusOrderState.status === "error") {
+      toast.error("Update Status Order Menu Failed.", {
+        description: updateStatusOrderState.errors?._form?.[0],
+      });
+    }
+
+    if (updateStatusOrderState.status === "success") {
+      toast.success("Update Status Order Menu Success.");
+      refetchOrderMenu();
+    }
+  }, [updateStatusOrderState]);
 
   return (
     <div className="space-y-4 w-full">
@@ -126,7 +204,7 @@ export default function DetailOrder({ id }: { id: string }) {
           />
         </div>
         <div className="lg:w-1/3">
-          <Summary order={order} orderMenu={orderMenu?.data} />
+          <Summary order={order} orderMenu={orderMenu?.data} id={id} />
         </div>
       </div>
     </div>
