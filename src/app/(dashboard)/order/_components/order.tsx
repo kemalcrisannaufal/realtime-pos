@@ -7,7 +7,6 @@ import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { HEADER_TABLE_ORDER } from "@/constants/order-constant";
 import useDataTable from "@/hooks/use-data-table";
-import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { startTransition, useActionState, useEffect, useMemo } from "react";
@@ -18,9 +17,12 @@ import { Ban, Link2Icon, ScrollText } from "lucide-react";
 import Link from "next/link";
 import { updateReservation } from "../actions";
 import { INITIAL_STATE_ACTION } from "@/constants/general-constant";
+import { useAuthStore } from "@/stores/auth-store";
+import { createClientSupabase } from "@/lib/supabase/default";
 
 export default function OrderManagement() {
-  const supabase = createClient();
+  const supabase = createClientSupabase();
+  const profile = useAuthStore((state) => state.profile);
   const {
     currentLimit,
     currentPage,
@@ -75,6 +77,27 @@ export default function OrderManagement() {
       return result.data as Table[];
     },
   });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("change-order")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+        },
+        () => {
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const [reservedState, reservedAction] = useActionState(
     updateReservation,
@@ -143,7 +166,7 @@ export default function OrderManagement() {
         </div>,
         <DropdownAction
           menu={
-            order.status === "reserved"
+            order.status === "reserved" && profile.role !== "kitchen"
               ? reservedActionList.map((item) => ({
                   label: item.label,
                   action: () =>
@@ -206,12 +229,14 @@ export default function OrderManagement() {
             placeholder="Search by name"
             onChange={(e) => handleChangeSearch(e)}
           />
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant={"outline"}>Create</Button>
-            </DialogTrigger>
-            <DialogCreateOrder refetch={refetch} tables={tables} />
-          </Dialog>
+          {profile.role !== "kitchen" && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant={"outline"}>Create</Button>
+              </DialogTrigger>
+              <DialogCreateOrder  tables={tables} />
+            </Dialog>
+          )}
         </div>
       </div>
 

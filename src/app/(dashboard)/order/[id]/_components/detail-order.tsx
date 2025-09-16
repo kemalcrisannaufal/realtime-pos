@@ -8,7 +8,7 @@ import {
   ORDERS_MENUS_STATUS,
 } from "@/constants/order-constant";
 import useDataTable from "@/hooks/use-data-table";
-import { createClient } from "@/lib/supabase/client";
+
 import { cn, convertIDR } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
@@ -25,9 +25,11 @@ import {
 import { EllipsisVertical } from "lucide-react";
 import { updateStatusOrderItem } from "../../actions";
 import { INITIAL_STATE_ACTION } from "@/constants/general-constant";
+import { useAuthStore } from "@/stores/auth-store";
+import { createClientSupabase } from "@/lib/supabase/default";
 
 export default function DetailOrder({ id }: { id: string }) {
-  const supabase = createClient();
+  const supabase = createClientSupabase();
   const { currentLimit, currentPage, handleChangePage, handleChangeLimit } =
     useDataTable();
 
@@ -76,6 +78,29 @@ export default function DetailOrder({ id }: { id: string }) {
     },
     enabled: !!order?.id,
   });
+
+  useEffect(() => {
+    if (!order?.id) return;
+    const channel = supabase
+      .channel("change-order")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders_menus",
+          filter: `order_id=eq.${order.id}`,
+        },
+        () => {
+          refetchOrderMenu();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [order?.id]);
 
   const [updateStatusOrderState, updateStatusOrderAction] = useActionState(
     updateStatusOrderItem,
@@ -136,13 +161,12 @@ export default function DetailOrder({ id }: { id: string }) {
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             {ORDERS_MENUS_STATUS.map((status, index) => {
-              if (status === orderMenu.status) {
+              if (status === orderMenu.status && status !== "served") {
                 const nextStatus = ORDERS_MENUS_STATUS[index + 1];
-
                 return (
                   <DropdownMenuItem
                     key={`status-${status}`}
-                    className="capitalize"
+                    className={cn("capitalize")}
                     onClick={() =>
                       handleUpdateStatusOrder({
                         id: orderMenu.id,
@@ -176,18 +200,21 @@ export default function DetailOrder({ id }: { id: string }) {
 
     if (updateStatusOrderState.status === "success") {
       toast.success("Update Status Order Menu Success.");
-      refetchOrderMenu();
     }
   }, [updateStatusOrderState]);
+
+  const profile = useAuthStore((state) => state.profile);
 
   return (
     <div className="space-y-4 w-full">
       <div className="flex justify-between items-center gap-4">
         <h1 className="font-bold text-2xl">Detail Order</h1>
 
-        <Link href={`/order/${id}/add`}>
-          <Button>Add Order Item</Button>
-        </Link>
+        {profile.role !== "kitchen" && (
+          <Link href={`/order/${id}/add`}>
+            <Button>Add Order Item</Button>
+          </Link>
+        )}
       </div>
 
       <div className="flex lg:flex-row flex-col gap-4 w-full">

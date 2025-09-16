@@ -25,10 +25,8 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function DialogCreateOrder({
-  refetch,
   tables,
 }: {
-  refetch: () => void;
   tables: Table[] | undefined;
 }) {
   const form = useForm({
@@ -61,7 +59,6 @@ export default function DialogCreateOrder({
       toast.success("Create Order Success");
       form.reset();
       document.querySelector<HTMLButtonElement>('[data-state="open"]')?.click();
-      refetch();
     }
   }, [createOrderState]);
 
